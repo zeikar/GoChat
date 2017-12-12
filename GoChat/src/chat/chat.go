@@ -17,12 +17,20 @@ var (
 	subscribe = make(chan (chan<- Subscription), 10)// 구독 채널
 	unsubscribe = make(chan (<-chan Event), 10)		// 구독 해지 채널
 	publish = make(chan Event, 10)					// 이벤트 발행 채널
+
+	register = make(chan User, 10)					// 사용자 가입 채널
 )
+
+// 사용자 정보 구조체 정의
+type User struct {
+	UserId string
+	UserName string
+}
 
 // 채팅 이벤트 구조체 정의
 type Event struct {
 	EvtType string	// 이벤트 타입 (join, leave, message)
-	User string		// 사용자 이름
+	UserId string	// 사용자 이름
 	Timestamp int	// 시간 값
 	Text string		// 메시지 텍스트
 }
@@ -35,10 +43,15 @@ type Subscription struct {
 						// 수신 전용 채널으로 이벤트 채널 생성
 }
 
+// 사용자 구조체 생성 함수
+func NewUser(userId, userName string) User {
+	return User{userId, userName}
+}
+
 // 이벤트 생성 함수
 // Event 구조체 인스턴스 생성. 현재 시각으로 세팅
-func NewEvent(evtType, user, msg string) Event {
-	return Event{evtType, user, int(time.Now().Unix()), msg}
+func NewEvent(evtType, userId, msg string) Event {
+	return Event{evtType, userId, int(time.Now().Unix()), msg}
 }
 
 // 새로운 사용자가 들어왔을 때 이벤트를 구독할 함수
@@ -65,28 +78,52 @@ func (s Subscription) Cancel() {
 	}
 }
 
-// 사용자가 들어왔을 때 이벤트 발행
-func Join(user string) {
-	// 사용자 이름으로 join 이벤트를 만들고 publish 채널로 보냄
-	publish <- NewEvent("join", user, "")
+// 사용자가 회원 가입할 때 이벤트 발행
+func RegisterUser(userId, userName string) {
+	// register 채널에 현재 가입하는 사용자 정보 보냄
+	register <- NewUser(userId, userName)
 
-	fmt.Println(user + " user joined")
+	fmt.Println(userId + " " + userName + " user registered")
+}
+
+// 사용자가 들어왔을 때 이벤트 발행
+func Join(userId string) {
+	// 사용자 이름으로 join 이벤트를 만들고 publish 채널로 보냄
+	publish <- NewEvent("join", userId, "")
+
+	fmt.Println(userId + " user joined")
 }
 
 // 사용자가 채팅 메시지를 보냈을 때 이벤트 발행
-func Say(user, message string) {
+func Say(userId, message string) {
 	// 사용자 이름, 메시지로 message 이벤트를 만들고 publish 채널로 보냄
-	publish <- NewEvent("message", user, message)
+	publish <- NewEvent("message", userId, message)
 
-	fmt.Println(user + " user said " + message)
+	fmt.Println(userId + " user said " + message)
 }
 
 // 사용자가 나갔을 때 이벤트 발행
-func Leave(user string) {
+func Leave(userId string) {
 	// 사용자 이름으로 leave 이벤트를 만들고 publish 채널로 보냄
-	publish <- NewEvent("leave", user, "")
+	publish <- NewEvent("leave", userId, "")
 
-	fmt.Println(user + " user left")
+	fmt.Println(userId + " user left")
+}
+
+// 사용자 회원가입 및 로그인 처리할 함수
+func UserManager() {
+	var users []User
+
+	for {	// 무한 루프
+		select {
+		// 회원 가입하면 register로 값 전송됨
+		case newUser := <-register:
+			// 회원가입된 유저 슬라이스에 추가
+			users = append(users, newUser)
+
+			fmt.Println(newUser.UserId + " " + newUser.UserName + " user appended")
+		}
+	}
 }
 
 // 구독, 구독 해지, 발행된 이벤트를 처리할 함수
@@ -152,6 +189,9 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// 사용자 관리 함수를 고루틴으로 실행
+	go UserManager()
+
 	go Chatroom() // 채팅방 처리 함수를 고루틴으로 실행
 
 	// 웹 브라우저에서 socket.io로 접속했을 때 실행할 콜백 설정
@@ -170,6 +210,12 @@ func main() {
 
 		// string 채널 생성
 		newMessages := make(chan string)
+
+		// 웹 브라우저에서 보내오는 채팅 메시지를 받을 수 있도록 콜백
+		so.On("register", func(userName string) {
+			// 받은 메시지를 newMessages 채널로 보냄
+			RegisterUser(so.Id(), userName)
+		})
 
 		// 웹 브라우저에서 보내오는 채팅 메시지를 받을 수 있도록 콜백
 		so.On("message", func(msg string) {
