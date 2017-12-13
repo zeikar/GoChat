@@ -142,7 +142,7 @@
   }
   .chat_area {
     float: left;
-    height: 300px;
+    height: 400px;
     overflow-x: hidden;
     overflow-y: auto;
     width: 100%;

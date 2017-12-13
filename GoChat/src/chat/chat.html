@@ -76,6 +76,43 @@
                   </li>      
       </ul>
       </div><!--chat_area-->
+
+        <div id="login_area" class="chat_area">
+            <div class="col-md-4 col-md-offset-4 col-sm-6 col-sm-offset-3">
+                <div class="panel-heading ">
+                    <div class="panel-title text-center">
+                        <h1 class="title">로그인</h1>
+                        <hr>
+                    </div>
+                </div>
+                <div class="main-login main-center"> 
+                    <div class="form-group">
+                        <label for="userid" class="cols-sm-2 control-label">ID</label>
+                        <div class="cols-sm-10">
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-user" aria-hidden="true"></i></span>
+                                <input type="text" class="form-control" name="inputName" id="inputName" placeholder="유저 이름을 입력하세요">
+                            </div>
+                        </div>
+                    </div>
+                    <!--<div class="form-group">
+                        <label for="password" class="cols-sm-2 control-label">비밀번호</label>
+                        <div class="cols-sm-10">
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-lock" aria-hidden="true"></i></span>
+                                <input type="password" class="form-control" name="password" id="password" placeholder="비밀번호를 입력하세요">
+                            </div>
+                        </div>
+                    </div>-->
+                    <hr>
+                    <div class="form-group ">
+                        <button id="login" class="btn btn-success btn-lg btn-block login-button">로그인</button>
+                    </div>
+                </div>
+            </div>
+        </div><!--login_area-->
+
+
           <div class="message_write">
         <textarea id="message" style="resize:none" class="form-control" placeholder="type a message"></textarea>
       <div class="clearfix"></div>
@@ -92,6 +129,39 @@
 
 <script>
     var socket = io();  // socket.io 객체 생성
+    var logined = false;// 현재 로그인 되어있는지 확인
+
+    // 처음에는 로그인 창 보이기.
+    $('#chat_area').hide();
+    $('#login_area').show();
+
+    // 보내기 버튼으로 로그인
+    $('#login').click(function() {
+        login();
+    });
+
+    // 엔터키 입력으로 로그인
+    $('#inputName').keyup(function(e) {
+        if(e.keyCode == 13) { // 엔터키 눌렀을 때
+            login();
+        }
+    });
+
+    // 채팅 메시지를 서버에 보내는 함수
+    login = function() {
+        userName = $('#inputName').val();  // 입력 상자에서 메시지를 가져옴
+        if(userName != ''){                      // 메시지가 있으면
+            socket.emit('loginrequest', userName);    // 서버에 메시지 보냄
+            $('#inputName').val('');          // 입력한 데이터 삭제
+        }
+    }
+
+    // 로그인 성공
+    loginsuceess = function() {
+        $('#chat_area').show();
+        $('#login_area').hide();
+    }
+
 
     // 서버에서 이벤트가 왔을 때 실행할 콜백 함수 설정
     socket.on('event', function(data) {
@@ -106,6 +176,9 @@
             case 'leave':
                 msg = data.UserId + '님이 퇴장했습니다.';
                 break;
+            case 'loginsuccess':
+                loginsuceess();
+                return;
         }
 
         // 메시지 날짜를 보기 쉽게 변환
@@ -147,8 +220,8 @@
         send();
     });
 
-      // 엔터키 입력으로 메시지를 보냄
-      $('#message').keyup(function(e) {
+    // 엔터키 입력으로 메시지를 보냄
+    $('#message').keyup(function(e) {
         if(e.keyCode == 13) { // 엔터키 눌렀을 때
             send();
         }

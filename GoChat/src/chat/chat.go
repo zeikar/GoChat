@@ -19,12 +19,14 @@ var (
 	publish = make(chan Event, 10)					// 이벤트 발행 채널
 
 	register = make(chan User, 10)					// 사용자 가입 채널
+	login = make(chan User, 10)						// 사용자 로그인 채널
 )
 
 // 사용자 정보 구조체 정의
 type User struct {
-	UserId string
-	UserName string
+	UserId string			// 유저의 세션 아이디
+	UserName string			// 유저 닉네임
+	UserChan chan Event		// 유저가 데이터 받을 수 있는 채널
 }
 
 // 채팅 이벤트 구조체 정의
@@ -39,13 +41,13 @@ type Event struct {
 // 채팅방에서 오고가는 메시지를 받음
 type Subscription struct {
 	Archive []Event		// 지금까지 쌓인 이벤트를 저장할 슬라이스
-	New <-chan Event	// 새 이벤트가 생길 때마다 데이터를 받을 수 있도록
-						// 수신 전용 채널으로 이벤트 채널 생성
+	New chan Event		// 새 이벤트가 생길 때마다 데이터를 받을 수 있도록
+						// 이벤트 채널 생성
 }
 
 // 사용자 구조체 생성 함수
-func NewUser(userId, userName string) User {
-	return User{userId, userName}
+func NewUser(userId, userName string, userChan chan Event) User {
+	return User{userId, userName, userChan}
 }
 
 // 이벤트 생성 함수
@@ -79,11 +81,19 @@ func (s Subscription) Cancel() {
 }
 
 // 사용자가 회원 가입할 때 이벤트 발행
-func RegisterUser(userId, userName string) {
+func RegisterUser(userId, userName string, userChan chan Event) {
 	// register 채널에 현재 가입하는 사용자 정보 보냄
-	register <- NewUser(userId, userName)
+	register <- NewUser(userId, userName, userChan)
 
 	fmt.Println(userId + " " + userName + " user registered")
+}
+
+// 사용자가 로그인할 때 이벤트 발행
+func LoginUser(userId, userName string, userChan chan Event) {
+	// login 채널에 현재 로그인하는 사용자 정보 보냄
+	login <- NewUser(userId, userName, userChan)
+
+	fmt.Println(userId + " " + userName + " user login requested")
 }
 
 // 사용자가 들어왔을 때 이벤트 발행
@@ -113,6 +123,7 @@ func Leave(userId string) {
 // 사용자 회원가입 및 로그인 처리할 함수
 func UserManager() {
 	var users []User
+	var loginedUsers []User
 
 	for {	// 무한 루프
 		select {
@@ -122,6 +133,19 @@ func UserManager() {
 			users = append(users, newUser)
 
 			fmt.Println(newUser.UserId + " " + newUser.UserName + " user appended")
+
+		case newUser := <-login:
+			// 회원가입된 유저 슬라이스에 추가
+			loginedUsers = append(loginedUsers, newUser)
+
+
+			fmt.Println(newUser.UserId + " " + newUser.UserName + " user logined")
+
+			// 유저에게 로그인 성공 메시지를 보냄
+			newUser.UserChan <- NewEvent("loginsuccess", newUser.UserId, "")
+			
+			Join(newUser.UserId)	// 사용자가 채팅방에 들어왔다는 이벤트 발행
+									// so.Id()는 socket.io의 세션 ID
 		}
 	}
 }
@@ -200,8 +224,7 @@ func main() {
 		// 웹 브라우저가 접속되면
 		s := Subscribe()	// 구독 처리
 
-		Join(so.Id())	// 사용자가 채팅방에 들어왔다는 이벤트 발행
-						// so.Id()는 socket.io의 세션 ID
+		fmt.Println(so.Id() + " user connected")
 
 		for _, event := range s.Archive {	// 지금까지 쌓인 이벤트를
 			so.Emit("event", event)			// 웹 브라우저로 접속한 사용자에게 보냄
@@ -211,10 +234,16 @@ func main() {
 		// string 채널 생성
 		newMessages := make(chan string)
 
-		// 웹 브라우저에서 보내오는 채팅 메시지를 받을 수 있도록 콜백
+		// 웹 브라우저에서 보내오는 회원 가입 요청을 받을 수 있도록 콜백
 		so.On("register", func(userName string) {
 			// 받은 메시지를 newMessages 채널로 보냄
-			RegisterUser(so.Id(), userName)
+			RegisterUser(so.Id(), userName, s.New)
+		})
+
+		// 웹 브라우저에서 보내오는 로그인 요청 받을 수 있도록 콜백
+		so.On("loginrequest", func(userName string) {
+			// 받은 메시지를 newMessages 채널로 보냄
+			LoginUser(so.Id(), userName, s.New)
 		})
 
 		// 웹 브라우저에서 보내오는 채팅 메시지를 받을 수 있도록 콜백
