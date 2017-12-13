@@ -18,9 +18,16 @@ var (
 	unsubscribe = make(chan (<-chan Event), 10)		// 구독 해지 채널
 	publish = make(chan Event, 10)					// 이벤트 발행 채널
 
-	register = make(chan User, 10)					// 사용자 가입 채널
-	login = make(chan User, 10)						// 사용자 로그인 채널
+	register = make(chan User, 10)				// 사용자 가입 채널
+	login = make(chan User, 10)					// 사용자 로그인 채널
+	loginCheck = make(chan LoginCheckRequest, 10)// 로그인 되어있는지 확인 채널
 )
+
+// 로그인한 유저 정보 요청
+type LoginCheckRequest struct {
+	UserId string			// 유저 닉네임
+	Check chan<- string		// 확인된 문자열을 받을 채널
+}
 
 // 사용자 정보 구조체 정의
 type User struct {
@@ -96,34 +103,58 @@ func LoginUser(userId, userName string, userChan chan Event) {
 	fmt.Println(userId + " " + userName + " user login requested")
 }
 
-// 사용자가 들어왔을 때 이벤트 발행
-func Join(userId string) {
-	// 사용자 이름으로 join 이벤트를 만들고 publish 채널로 보냄
-	publish <- NewEvent("join", userId, "")
+// 현재 유저가 로그인 되어있는지 확인
+func IsUserLogined(userId string) bool{
+	// 확인 값을 받을 string 채널 생성
+	isLogined := make(chan string)
 
-	fmt.Println(userId + " user joined")
+	// loginCheck에 로그인 체크 요청 보냄
+	loginCheck <- LoginCheckRequest{userId, isLogined}
+
+	// 요청 받고 리턴
+	return <-isLogined != "Anonymous"
+}
+
+// 현재 로그인 되어있는 사용자의 이름 리턴
+func GetUserName(userId string) string{
+	// 확인 값을 받을 string 채널 생성
+	userNameChan := make(chan string)
+
+	// loginCheck에 로그인 체크 요청 보냄
+	loginCheck <- LoginCheckRequest{userId, userNameChan}
+	
+	// 요청 받고 리턴
+	return <-userNameChan
+}
+
+// 사용자가 들어왔을 때 이벤트 발행
+func Join(userName string) {
+	// 사용자 이름으로 join 이벤트를 만들고 publish 채널로 보냄
+	publish <- NewEvent("join", userName, "")
+
+	fmt.Println(userName + " user joined")
 }
 
 // 사용자가 채팅 메시지를 보냈을 때 이벤트 발행
-func Say(userId, message string) {
+func Say(userName, message string) {
 	// 사용자 이름, 메시지로 message 이벤트를 만들고 publish 채널로 보냄
-	publish <- NewEvent("message", userId, message)
+	publish <- NewEvent("message", userName, message)
 
-	fmt.Println(userId + " user said " + message)
+	fmt.Println(userName + " user said " + message)
 }
 
 // 사용자가 나갔을 때 이벤트 발행
-func Leave(userId string) {
+func Leave(userName string) {
 	// 사용자 이름으로 leave 이벤트를 만들고 publish 채널로 보냄
-	publish <- NewEvent("leave", userId, "")
+	publish <- NewEvent("leave", userName, "")
 
-	fmt.Println(userId + " user left")
+	fmt.Println(userName + " user left")
 }
 
 // 사용자 회원가입 및 로그인 처리할 함수
 func UserManager() {
 	var users []User
-	var loginedUsers []User
+	loginedUsers := map[string]string{}
 
 	for {	// 무한 루프
 		select {
@@ -134,18 +165,26 @@ func UserManager() {
 
 			fmt.Println(newUser.UserId + " " + newUser.UserName + " user appended")
 
+		// 사용자가 로그인하면 login으로 값 전송됨
 		case newUser := <-login:
-			// 회원가입된 유저 슬라이스에 추가
-			loginedUsers = append(loginedUsers, newUser)
-
+			// 회원가입된 유저 맵에 추가
+			loginedUsers[newUser.UserId] = newUser.UserName
 
 			fmt.Println(newUser.UserId + " " + newUser.UserName + " user logined")
 
 			// 유저에게 로그인 성공 메시지를 보냄
 			newUser.UserChan <- NewEvent("loginsuccess", newUser.UserId, "")
 			
-			Join(newUser.UserId)	// 사용자가 채팅방에 들어왔다는 이벤트 발행
-									// so.Id()는 socket.io의 세션 ID
+			Join(newUser.UserName)	// 사용자가 채팅방에 들어왔다는 이벤트 발행
+									// so.Id()는 socket.io의 세션 ID		
+
+		// 유저가 로그인 되어있는지 확인 요청하면 loginCheck으로 값 전송됨
+		case request := <-loginCheck:
+			if val, ok := loginedUsers[request.UserId]; ok {
+				request.Check <- val
+			} else {
+				request.Check <- "Anonymous"
+			}
 		}
 	}
 }
@@ -254,10 +293,14 @@ func main() {
 
 		// 웹 브라우저의 접속이 끊어졌을 때 콜백 설정
 		so.On("disconnection", func() {
-			// 사용자가 채팅방에서 나갔다는 이벤트 발행
-			Leave(so.Id())
+			// 로그인한 유저는 사용자가 채팅방에서 나갔다는 이벤트 발행
+			if IsUserLogined(so.Id()) {
+				Leave(GetUserName(so.Id()))
+			}
 			// 구독 취소
 			s.Cancel()
+
+			fmt.Println(so.Id() + " user disconnected")
 		})
 
 		// 고루틴 실행
@@ -269,7 +312,7 @@ func main() {
 					so.Emit("event", event)	// 이벤트 데이터를 웹 브라우저에 보냄
 
 				case msg := <-newMessages:	// 웹 브라우저에서 채팅 메시지를 보내오면
-					Say(so.Id(), msg)		// 채팅 메시지 이벤트 발행
+					Say(GetUserName(so.Id()), msg)		// 채팅 메시지 이벤트 발행
 											// 사용자 아이디와 메시지 내용을 이벤트로 발행
 				}
 			}

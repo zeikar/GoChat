@@ -168,7 +168,7 @@
         var msg;
         switch (data.EvtType) { // 이벤트 타입을 판별하여 메시지 생성
             case 'message':
-                msg = data.UserId + ':' + data.Text;
+                msg = data.Text;
                 break;
             case 'join':
                 msg = data.UserId + '님이 입장했습니다!';
@@ -190,13 +190,14 @@
         // <li> 태그를 생성하여 채팅 메시지를 넣어줌
         list = $('#messageList').append(
             $('<li>').attr('class', 'left clearfix').append(
+                $('<span>').attr('class', 'chat-img1 pull-left').text(data.UserId)).append(
                 $('<div>').attr('class', 'chat-body1 clearfix').append(
                     $('<p>').text(msg)
         ).append($('<div>').attr('class', 'chat_time pull-right').text(dateString)))); 
 
         $('#chat_area').animate({
             scrollTop: $('#messageList').prop('scrollHeight')
-        }, 30);
+        }, 'fast');
 
 
         // 채팅 메시지가 15개 넘어가면
