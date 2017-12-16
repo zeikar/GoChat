@@ -167,16 +167,31 @@ func UserManager() {
 
 		// 사용자가 로그인하면 login으로 값 전송됨
 		case newUser := <-login:
-			// 회원가입된 유저 맵에 추가
-			loginedUsers[newUser.UserId] = newUser.UserName
+			found := false
+			// 회원가입 되어있는지 확인
+			for _, user := range users {
+				if user.UserName == newUser.UserName {
+					found = true
+					break
+				}
+			}
 
-			fmt.Println(newUser.UserId + " " + newUser.UserName + " user logined")
-
-			// 유저에게 로그인 성공 메시지를 보냄
-			newUser.UserChan <- NewEvent("loginsuccess", newUser.UserId, "")
-			
-			Join(newUser.UserName)	// 사용자가 채팅방에 들어왔다는 이벤트 발행
-									// so.Id()는 socket.io의 세션 ID		
+			if found {
+				// 로그인 유저 맵에 추가
+				loginedUsers[newUser.UserId] = newUser.UserName
+				
+				fmt.Println(newUser.UserId + " " + newUser.UserName + " user logined")
+	
+				// 유저에게 로그인 성공 메시지를 보냄
+				newUser.UserChan <- NewEvent("loginsuccess", newUser.UserName, "")
+				
+				Join(newUser.UserName)	// 사용자가 채팅방에 들어왔다는 이벤트 발행
+										// so.Id()는 socket.io의 세션 ID	
+			} else {
+				fmt.Println(newUser.UserId + " " + newUser.UserName + " user failed")
+				// 유저에게 로그인 실패 메시지를 보냄
+				newUser.UserChan <- NewEvent("loginfailed", newUser.UserName, "")
+			}
 
 		// 유저가 로그인 되어있는지 확인 요청하면 loginCheck으로 값 전송됨
 		case request := <-loginCheck:

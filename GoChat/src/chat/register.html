@@ -1,0 +1,50 @@
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Go Chatting</title>
+
+    <!-- CDN의 Bootstrap 사용 -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css">
+    <!-- CDN의 jQuery 사용 -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.6/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js"></script>
+
+    <!-- 웹 브라우저용 socket.io JavaScript 파일 -->
+    <script src="//cdn.socket.io/socket.io-1.3.3.js"></script>
+    <link rel="stylesheet" href="https://getbootstrap.com/docs/4.0/examples/signin/signin.css">
+</head>
+<body>
+  <div class="container">    
+    <form class="form-signin" action="index.html">
+      <h1 class="form-signin-heading">Go CHAT by.2013111995</h1>
+      <hr/>
+      <h2>회원 가입</h2>
+      <label for="inputName" class="sr-only">사용자 이름</label>
+      <input type="text" id="inputName" class="form-control" placeholder="사용자 이름을 입력하세요" required autofocus  autocomplete="off">
+      <label for="inputPassword" class="sr-only">Password</label>
+      <!--<input type="password" id="inputPassword" class="form-control" placeholder="Password" required>-->
+      <hr/>
+      <button id="send" class="btn btn-lg btn-primary btn-block">회원 가입!</button>
+    </form>    
+  </div> <!-- /container -->
+
+  <script>
+      var socket = io();  // socket.io 객체 생성
+
+      // 회원 가입을 서버에 보내는 함수
+      send = function() {
+          msg = $('#inputName').val();  // 입력 상자에서 아이디를 가져옴
+
+          socket.emit('register', msg);    // 서버에 아이디 보냄
+      }
+
+      // 보내기 버튼으로 메시지를 보냄
+      $('#send').click(function() {
+            send();
+        });
+
+  </script>
+</body>
+</html>

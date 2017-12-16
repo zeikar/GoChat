@@ -4,49 +4,249 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Go Chatting</title>
 
-    <!-- CDN의 Bootstrap 사용 -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <!-- CDN의 jQuery 사용 -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.6/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
     <!-- 웹 브라우저용 socket.io JavaScript 파일 -->
     <script src="//cdn.socket.io/socket.io-1.3.3.js"></script>
-    <link rel="stylesheet" href="https://getbootstrap.com/docs/4.0/examples/signin/signin.css">
+
+    <link rel="stylesheet" href="chat.css">
 </head>
 <body>
-  <div class="container">    
-    <form class="form-signin" action="chat.html">
-      <h1 class="form-signin-heading">Go CHAT by.2013111995</h1>
-      <hr/>
-      <h2>회원 가입</h2>
-      <label for="inputName" class="sr-only">사용자 이름</label>
-      <input type="text" id="inputName" class="form-control" placeholder="사용자 이름을 입력하세요" required autofocus>
-      <label for="inputPassword" class="sr-only">Password</label>
-      <!--<input type="password" id="inputPassword" class="form-control" placeholder="Password" required>-->
-      <hr/>
-      <button id="send" class="btn btn-lg btn-primary btn-block">회원 가입!</button>
-      <hr/>
-      <h3>회원이신가요? <a href="chat.html">로그인</a></h3>
-    </form>    
-  </div> <!-- /container -->
+<script src="https://use.fontawesome.com/45e03a14ce.js"></script>
+<div class="main_section">
+    <div class="container">
+      <div class="chat_container">
+          <div id="chat_sidebar" class="col-sm-3 chat_sidebar">
+        <div class="row">
+            <div id="custom-search-input">
+                <div class="input-group col-md-12">
+                  <h4>채팅방 목록</h4>
+                </div>
+            </div>
+            <div class="member_list">
+                <ul class="list-unstyled">
 
-  <script>
-      var socket = io();  // socket.io 객체 생성
 
-      // 회원 가입을 서버에 보내는 함수
-      send = function() {
-          msg = $('#inputName').val();  // 입력 상자에서 아이디를 가져옴
+                  <li class="left clearfix">
+                      <div class="chat-body clearfix">
+                        <div class="header_sec">
+                            <strong class="primary-font">채팅방 1</strong> <strong class="pull-right">
+                            </strong>
+                        </div>
+                      </div>
+                  </li>              
+                  
+                  
+                </ul>
+            </div></div>
+          </div>
+          <!--chat_sidebar-->
+      
+      
+          <div class="col-sm-9 message_section">
+      <div class="row">
+      <div id="new_message_head" class="new_message_head">
+      <div class="pull-left"><button><i class="fa fa-plus-square-o" aria-hidden="true"></i> 채팅방 만들기</button></div><div class="pull-right"><div class="dropdown">
+  <button class="dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <span id="welcome-user-id"></span>
+    <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenu1">
+    <li><a href="index.html">로그아웃</a></li>
+  </ul>
+</div></div>
+      </div><!--new_message_head-->
+      
+      <div id="chat_area" class="chat_area">
+        <ul id="messageList" class="list-unstyled">
+                <li class="left clearfix">                      
+                        <div class="chat-body1 clearfix">
+                            <p>Go CHAT에 오신 것을 환영합니다!</p>
+                        </div>
+                    </li>      
+        </ul>
+      </div><!--chat_area-->
 
-          socket.emit('register', msg);    // 서버에 아이디 보냄
-      }
+        <div id="login_area" class="chat_area">
+            <div class="col-md-4 col-md-offset-4 col-sm-6 col-sm-offset-3">
+                <div id="login-fail-alert" class="alert alert-danger" style="display: none;">
+                    <strong>로그인 실패!</strong> 가입되지 않은 아이디입니다. 다시 로그인해 주세요.
+                </div>
+                <div class="panel-title text-center">
+                    <h2>Go CHAT by.2013111995</h2>
+                    <hr>
+                </div>
+                <div class="main-login main-center"> 
+                    <div class="form-group">
+                        <label for="userid" class="cols-sm-2 control-label">ID</label>
+                        <div class="cols-sm-10">
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-user" aria-hidden="true"></i></span>
+                                <input type="text" class="form-control" name="inputName" id="inputName" placeholder="유저 이름을 입력하세요"  autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                    <!--<div class="form-group">
+                        <label for="password" class="cols-sm-2 control-label">비밀번호</label>
+                        <div class="cols-sm-10">
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-lock" aria-hidden="true"></i></span>
+                                <input type="password" class="form-control" name="password" id="password" placeholder="비밀번호를 입력하세요">
+                            </div>
+                        </div>
+                    </div>-->
+                    <hr>
+                    <div class="form-group ">
+                        <button id="login" class="btn btn-success btn-lg btn-block login-button">로그인</button>
+                    </div>
+                    <div class="panel-title text-center">
+                        <h5 class="title">회원이 아니신가요? <a href="register.html">회원가입</a></h5>
+                    </div>
+                </div>
+            </div>
+        </div><!--login_area-->
 
-      // 보내기 버튼으로 메시지를 보냄
-      $('#send').click(function() {
+
+          <div id="message_write" class="message_write">
+        <textarea id="message" style="resize:none" class="form-control" placeholder="메시지를 입력하세요"></textarea>
+      <div class="clearfix"></div>
+      <div class="chat_bottom">
+        <button id="send" class="pull-right btn btn-info">
+        전송</a>
+      </div>
+      </div>
+      </div>
+          </div> <!--message_section-->
+      </div>
+    </div>
+</div>
+
+<script>
+    var socket = io();  // socket.io 객체 생성
+    var logined = false;// 현재 로그인 되어있는지 확인
+    var loginId = "";   // 현재 로그인 되어있는 유저 이름
+
+    // 처음에는 로그인 창 보이기.
+    $('#chat_area').hide();
+    $('#login_area').show();
+    $('#message_write').hide();
+    $('#new_message_head').hide();
+    $('#chat_sidebar').hide();
+
+    // 보내기 버튼으로 로그인
+    $('#login').click(function() {
+        login();
+    });
+
+    // 엔터키 입력으로 로그인
+    $('#inputName').keyup(function(e) {
+        if(e.keyCode == 13) { // 엔터키 눌렀을 때
+            login();
+        }
+    });
+
+    // 채팅 메시지를 서버에 보내는 함수
+    login = function() {
+        userName = $('#inputName').val();  // 입력 상자에서 메시지를 가져옴
+        if(userName != ''){                      // 메시지가 있으면
+            socket.emit('loginrequest', userName);    // 서버에 메시지 보냄
+            $('#inputName').val('');          // 입력한 데이터 삭제
+        }
+    }
+
+    // 로그인 성공
+    loginsuceess = function() {
+        $('#chat_area').show();
+        $('#login_area').hide();
+        $('#message_write').show();
+        $('#new_message_head').show();
+        $('#chat_sidebar').show();
+        $('#welcome-user-id').text(loginId + '님 반갑습니다.');
+    }
+
+    loginfail = function() {
+        $('#login-fail-alert').show();
+    }
+
+    // 서버에서 이벤트가 왔을 때 실행할 콜백 함수 설정
+    socket.on('event', function(data) {
+        var msg;
+        switch (data.EvtType) { // 이벤트 타입을 판별하여 메시지 생성
+            case 'message':
+                msg = data.Text;
+                break;
+            case 'join':
+                msg = data.UserId + '님이 입장했습니다!';
+                data.UserId = "SYSTEM";
+                break;
+            case 'leave':
+                msg = data.UserId + '님이 퇴장했습니다.';
+                data.UserId = "SYSTEM";
+                break;
+            case 'loginsuccess':    // 로그인 성공
+                loginId = data.UserId;
+                loginsuceess();
+                return;
+            case 'loginfailed':       // 로그인 실패
+                loginfail();
+                return;
+        }
+
+        // 메시지 날짜를 보기 쉽게 변환
+        var msgDate = new Date(data.Timestamp * 1000)
+        var dateString = msgDate.getHours() + ":" + msgDate.getMinutes();
+        
+        // 자신의 메시지는 오른쪽으로 출력
+        var htmlClass = "left";
+        if(loginId == data.UserId)
+        {
+            htmlClass = "right";
+        }
+
+        // <li> 태그를 생성하여 채팅 메시지를 넣어줌
+        list = $('#messageList').append(
+            $('<li>').attr('class', 'left clearfix').append(
+                $('<span>').attr('class', 'chat-img1 pull-'+htmlClass).text(data.UserId)).append(
+                $('<div>').attr('class', 'chat-body1 clearfix').append(
+                    $('<p>').attr('class', htmlClass).text(msg)
+        ).append($('<span>').attr('class', 'chat-img1 pull-' + htmlClass).text(dateString)))); 
+
+        $('#chat_area').animate({
+            scrollTop: $('#messageList').prop('scrollHeight')
+        }, 'fast');
+
+
+        // 채팅 메시지가 15개 넘어가면
+        if(list.children().size > 15) {
+            // 첫번째 메시지 삭제
+            list.find('li:first').remove();
+        }
+    });
+
+    // 채팅 메시지를 서버에 보내는 함수
+    send = function() {
+        msg = $('#message').val();  // 입력 상자에서 메시지를 가져옴
+        if(msg != '' && msg != '\n'){                      // 메시지가 있으면
+            socket.emit('message', msg);    // 서버에 메시지 보냄
+            $('#message').val('');          // 입력한 데이터 삭제
+        }
+    }
+
+    // 보내기 버튼으로 메시지를 보냄
+    $('#send').click(function() {
+        send();
+    });
+
+    // 엔터키 입력으로 메시지를 보냄
+    $('#message').keyup(function(e) {
+        if(e.keyCode == 13) { // 엔터키 눌렀을 때
             send();
-        });
-
-  </script>
+        }
+    });
+</script>
 </body>
 </html>
